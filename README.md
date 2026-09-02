@@ -13,23 +13,17 @@ Everything here runs from **one command** (`docker compose up`) and reproduces i
 
 ---
 
-## Remediation approach (AI-assisted workflow)
+## Overview
 
-Devin investigates and implements each fix; every change is then independently reviewed —
-by Devin Review and by me — before merge. Where review surfaced a correctness issue, I
-evaluated the tradeoff and iterated with Devin rather than merging as-is (see PRs #10 and
-#13). The emphasis throughout was **preserving existing behavior** while remediating the
-issue. The goal isn't to maximize autonomous merges; it's to maximize the engineering work
-that can be safely automated behind a human approval gate.
-
-## Why it exists
-
-Scanners tell you *what* to fix; the bottleneck is the human hours to *fix* each
-finding and open a reviewable PR. Devin already ships the remediation loop natively
-(Code Scans, Automations, Playbooks, Metrics). This project is the thin layer a real
-team still needs: it **orchestrates Devin's primitives** into a governed program and
-gives leadership a **single control plane** — findings → PRs → success rate → cost.
-It composes Devin; it does not reinvent it.
+Scanners identify *what* to fix; the bottleneck is the engineering time to fix each
+finding, test it, and open a reviewable PR. Devin ships the remediation primitives
+natively (Code Scans, Automations, Playbooks, Metrics). This project is the thin layer
+that composes them into a governed program: each fix is implemented by a Devin session,
+independently reviewed (Devin Review + a human) before merge, and tracked on a control
+plane. Where review surfaces a correctness issue, the change is sent back to Devin to
+iterate rather than merged as-is (e.g. PRs #10 and #13). The emphasis is on preserving
+existing behavior; the goal is not to maximize autonomous merges, but to maximize the
+engineering work that can be safely automated behind a human approval gate.
 
 ## Architecture
 
@@ -109,14 +103,18 @@ PRs → review → ACU cost) so the entire system runs and demos offline.
 
 Plus issues **Devin's Code Scan discovers on its own** via `POST /scan`.
 
-## Observability — "how would a leader know it's working?"
+## Observability
 
-`/dashboard` (auto-refresh) shows, composed from our records + Devin's **native**
-Metrics/Consumption APIs:
-- **ROI**: engineer-hours reclaimed · cost per fix
-- **Autonomy rate** (autonomous vs. needs-a-human) · **mean time-to-fix** vs. a manual baseline
+`/dashboard` (auto-refreshing) is composed from the local store and Devin's native
+**Metrics API**:
 - **Remediation funnel**: findings → dispatched → PRs opened → **merged**
-- Risk-by-severity, a per-remediation table (severity → Devin session → PR → ACU), live activity log
+- **Autonomy rate** (autonomous vs. needs-a-human) and **merge rate**
+- **Estimated** engineer-hours saved — a labeled assumption (PRs × a per-fix estimate),
+  not a measured value
+- Risk-by-severity and a per-remediation table (severity → Devin session → PR), live log
+
+ACU/cost is available via Devin's **Consumption API** on Teams/Enterprise plans; on a
+Free account that API returns 0, so cost is omitted rather than shown as `$0`.
 
 ## Project layout
 
@@ -144,15 +142,16 @@ Sessions · **Code Scans** · **Automations** (event + schedule) · **Playbooks*
 **Knowledge** · **Devin Review** · **Metrics** · **Consumption**. (Dynamic Workflows &
 MCP integrations noted as next steps.)
 
-## Why Devin (not a dependency bot)
+## Design rationale
 
-**Dependency bots automate deterministic changes. Devin can automate the reasoning-heavy
-remediation loop.** Devin reads the code, implements the fix, **writes a
-regression test, runs the repo's lint/tests, iterates**, and opens the PR — then reviews
-it. It even reads the repo's `AGENTS.md`/Playbook (e.g. it fixed a dependency by editing
-the `uv` *source constraint* and recompiling, not hand-editing the pin). The boundary:
-bounded, test-verifiable fixes land autonomously; wide-blast-radius/visual changes (the
-deck.gl upgrade) still want a human — and the dashboard shows exactly which is which.
+Dependency bots automate deterministic changes; this system targets the reasoning-heavy
+part of remediation. A Devin session reads the code, implements the fix, writes a
+regression test, runs the repo's lint/tests, iterates, and opens the PR — then Devin
+Review analyzes it. Sessions honor the repo's own `AGENTS.md` and the provisioned
+Playbook (e.g. dependency fixes edit the `uv` source constraint and recompile rather than
+hand-editing the pin). The intended boundary: bounded, test-verifiable fixes land
+autonomously; wide-blast-radius or visual changes (e.g. the deck.gl upgrade) route to a
+human — and the dashboard makes that split visible.
 
 ## Next steps (real engagement)
 
