@@ -1,8 +1,10 @@
 # Devin Remediation Control Plane
 
-A **production-style, event-driven automation** built on the Devin API that turns
-security & code-quality findings in a repo into **reviewed-ready pull requests** —
-autonomously — and reports effectiveness to an engineering leader.
+An **event-driven remediation control plane** built on the Devin API that turns
+security and code-quality findings into **review-ready pull requests**.
+
+The system automates the expensive engineering loop — investigation, implementation,
+testing, and review — while preserving a **human approval gate** for higher-risk changes.
 
 Target for this demo: a fork of [Apache Superset](https://github.com/apache/superset).
 
@@ -10,6 +12,15 @@ Everything here runs from **one command** (`docker compose up`) and reproduces i
 **mock mode for $0, no credentials** — flip one env var for live Devin.
 
 ---
+
+## Remediation approach (AI-assisted workflow)
+
+Devin investigates and implements each fix; every change is then independently reviewed —
+by Devin Review and by me — before merge. Where review surfaced a correctness issue, I
+evaluated the tradeoff and iterated with Devin rather than merging as-is (see PRs #10 and
+#13). The emphasis throughout was **preserving existing behavior** while remediating the
+issue. The goal isn't to maximize autonomous merges; it's to maximize the engineering work
+that can be safely automated behind a human approval gate.
 
 ## Why it exists
 
@@ -22,30 +33,34 @@ It composes Devin; it does not reinvent it.
 
 ## Architecture
 
-```
-  TRIGGERS (all reproducible)                CONTROL PLANE (this repo, FastAPI + Docker)
-  ┌───────────────────────────┐             ┌───────────────────────────────────────────┐
-  │ 1. GitHub `devin-fix` label│──event────► │ native Devin Automation (provisioned by     │
-  │    (event Automation)      │             │ scripts/setup_devin.py) → session → PR      │
-  ├───────────────────────────┤             ├───────────────────────────────────────────┤
-  │ 2. Weekly schedule         │──periodic─► │ native schedule Automation → security sweep │
-  ├───────────────────────────┤             ├───────────────────────────────────────────┤
-  │ 3. POST /scan (on-demand)  │──API──────► │ Code Scan → findings → remediate → PR       │
-  └───────────────────────────┘             │      │            (Devin sessions)          │
-                                             │      ▼                                       │
-                                             │ auto-trigger Devin Review on each PR         │
-                                             │      │                                       │
-                                             │      ▼   reconcile ALL sessions from Devin API│
-                                             │ SQLite + native Metrics/Consumption          │
-                                             │      │                                       │
-                                             │ GET /dashboard   GET /metrics                │──► what a VP sees
-                                             └───────────────────────────────────────────┘
-```
+![Remediation flow](docs/architecture.png)
 
-**Three triggers, matching the brief:** event (`devin-fix` label), periodic (weekly
-schedule), and on-demand (`POST /scan`). All drive native Devin sessions; the control
-plane **reconciles every session (any origin) from the Devin API** so the dashboard
-reflects reality — not just what this process launched.
+**A fix starts one of two ways:**
+1. **An engineer labels an issue** `devin-fix` → Devin fixes that specific issue.
+2. **A security scan finds issues** → Devin fixes the high-severity ones. The scan runs
+   **on-demand** (`POST /scan`) or **weekly** (scheduled); lower-confidence findings are
+   surfaced for human triage rather than auto-fixed.
+
+From there it's one flow: a **Devin session** investigates, fixes, tests, and opens a
+**PR** → **Devin Review** analyzes it → a **human approves and merges**, or holds it. If
+review finds an issue, it loops back to Devin to self-correct.
+
+A **FastAPI control plane** (this repo) runs it all: it triggers the scan pipeline and,
+via a **continuous background loop**, **reconciles every session (any origin) from the
+Devin API** and **auto-triggers Devin Review on each new PR** — so review is part of the
+automation (not a manual `/devin review`), and the **dashboard** reflects reality, not
+just what this process launched. (Devin's native Automations provision the event/schedule
+triggers via `scripts/setup_devin.py`; Devin's native auto-review can also be toggled on
+in Settings → Review as a complement.)
+
+## Results
+
+- **7 curated findings → 7 remediation PRs**, 7/7 merged after review.
+- **Devin Review caught a correctness bug** in the timezone remediation and drove a second iteration (Devin self-corrected).
+- The **Slack remediation surfaced a backend-compatibility tradeoff** that required human judgment (left open with the tradeoff documented + tests added).
+- **Devin Code Scan independently discovered** additional findings and opened a fix (semantic-layer secret masking).
+- The **scheduled automation was exercised end-to-end** (trigger fired).
+- Devin fixed dependencies the *correct* way (edited the `uv` source constraint and recompiled) and verified the deck.gl upgrade by **running the app in a browser**.
 
 ## Quickstart — mock mode ($0, no key, how a grader runs it)
 
@@ -120,6 +135,7 @@ scripts/
 seed_issues/
   *.md            the 7 curated issue bodies (the use case)
   seed_issues.sh  file them onto a fork + create the devin-fix label
+tests/            unit tests for the core logic (pip install pytest && pytest)
 ```
 
 ## Devin platform surface used
@@ -130,7 +146,8 @@ MCP integrations noted as next steps.)
 
 ## Why Devin (not a dependency bot)
 
-A version bot files a PR and stops. Devin reads the code, implements the fix, **writes a
+**Dependency bots automate deterministic changes. Devin can automate the reasoning-heavy
+remediation loop.** Devin reads the code, implements the fix, **writes a
 regression test, runs the repo's lint/tests, iterates**, and opens the PR — then reviews
 it. It even reads the repo's `AGENTS.md`/Playbook (e.g. it fixed a dependency by editing
 the `uv` *source constraint* and recompiling, not hand-editing the pin). The boundary:

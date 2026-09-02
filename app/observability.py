@@ -62,13 +62,16 @@ def _aggregate(native: dict) -> dict:
 
     dispatched = len(rems)
     prs_opened = sum(1 for r in rems if r["pr_url"])
-    merged = int((native.get("metrics_prs", {}) or {}).get("prs_merged_count", 0) or 0)
+    _prs = native.get("metrics_prs", {}) or {}
+    merged = int(_prs.get("prs_merged_count", 0) or 0)
+    prs_created = int(_prs.get("prs_created_count", 0) or 0) or prs_opened
     findings_total = sum((r["findings_total"] or 0) for r in runs)
     success = by_status.get("success", 0)
     needs_attention = by_status.get("needs_attention", 0)
     failed = by_status.get("failed", 0)
     active = by_status.get("pending", 0) + by_status.get("running", 0)
     completed = success + needs_attention + failed
+    reviewed = sum(1 for r in rems if r.get("reviewed"))
     total_acu = round(sum((r["acus_consumed"] or 0) for r in rems), 2)
 
     # time-to-PR (detection -> PR opened), from our timestamps
@@ -97,8 +100,10 @@ def _aggregate(native: dict) -> dict:
         "success": success,
         "needs_attention": needs_attention,
         "failed": failed,
+        "reviewed": reviewed,
+        "prs_created": prs_created,
         "autonomy_rate": round(success / completed, 3) if completed else None,
-        "merge_rate": round(merged / prs_opened, 3) if prs_opened else None,
+        "merge_rate": round(merged / prs_created, 3) if prs_created else None,
         "mttr_seconds": round(mttr, 1),
         "mttr_human": _fmt_duration(mttr),
         "manual_baseline_days": settings.manual_baseline_days,
@@ -155,33 +160,33 @@ async def dashboard() -> str:
     merge_pct = f'{m["merge_rate"]*100:.0f}%' if m["merge_rate"] is not None else "—"
     usd = f' · ≈${m["usd_cost"]}' if m["usd_cost"] is not None else ""
 
-    # ---- hero ROI ----
+    # ---- hero ----
     hero = f"""
     <div class="hero">
       <div class="hero-eyebrow">AUTONOMOUS REMEDIATION · {html.escape(settings.target_repo)}</div>
-      <div class="hero-big">≈ {m['hours_saved']:.0f} engineer-hours reclaimed</div>
-      <div class="hero-sub">{m['prs_opened']} fixes shipped as PRs · {m['total_acu']:.1f} ACU spent{usd}
-        · cost/fix {m['cost_per_fix_acu']:.2f} ACU · <span class="chip">{m['mode']}</span></div>
+      <div class="hero-big">{m['prs_created']} findings fixed as PRs · {m['prs_merged']} merged</div>
+      <div class="hero-sub">≈ {m['hours_saved']:.0f} est. engineer-hours saved
+        · {autonomy_pct} autonomous · <span class="chip">{m['mode']}</span></div>
     </div>"""
 
-    # ---- KPI cards ----
+    # ---- KPI cards (measured only) ----
     kpis = "".join([
         _card(f'<div class="k-l">Autonomy rate</div><div class="k-v">{autonomy_pct}</div>'
               f'{_bar((autonomy or 0)*100, "#16a34a")}'
               f'<div class="k-s">{m["success"]} autonomous · {m["needs_attention"]} need a human · {m["failed"]} failed</div>'),
-        _card(f'<div class="k-l">Mean time to fix (PR)</div><div class="k-v">{m["mttr_human"]}</div>'
-              f'<div class="k-s">vs ≈{m["manual_baseline_days"]} days in a human backlog</div>'),
         _card(f'<div class="k-l">Merge rate</div><div class="k-v">{merge_pct}</div>'
               f'{_bar((m["merge_rate"] or 0)*100, "#2563eb")}'
-              f'<div class="k-s">{m["prs_merged"]} of {m["prs_opened"]} PRs merged</div>'),
-        _card(f'<div class="k-l">Cost per fix</div><div class="k-v">{m["cost_per_fix_acu"]:.2f}<span class="unit"> ACU</span></div>'
-              f'<div class="k-s">{m["total_acu"]:.1f} ACU total{usd}</div>'),
+              f'<div class="k-s">{m["prs_merged"]} of {m["prs_created"]} PRs merged</div>'),
+        _card(f'<div class="k-l">PRs opened</div><div class="k-v">{m["prs_created"]}</div>'
+              f'<div class="k-s">across {m["scan_runs"]} runs / triggers</div>'),
+        _card(f'<div class="k-l">Est. engineer-hours saved</div><div class="k-v">{m["hours_saved"]:.0f}<span class="unit"> h</span></div>'
+              f'<div class="k-s">assumption: ~{settings.hours_saved_per_fix:.0f}h per fix (not measured)</div>'),
     ])
 
     # ---- funnel ----
     stages = [("Findings detected", m["findings_total"], "#7c3aed"),
               ("Remediations dispatched", m["dispatched"], "#2563eb"),
-              ("PRs opened", m["prs_opened"], "#0891b2"),
+              ("PRs opened", m["prs_created"], "#0891b2"),
               ("PRs merged", m["prs_merged"], "#16a34a")]
     top = max((s[1] for s in stages), default=0) or 1
     funnel_rows = ""
@@ -276,6 +281,6 @@ async def dashboard() -> str:
    {table}
    <div style="height:14px"></div>
    {activity}
-   <div class="footnote">ROI estimate assumes ~{settings.hours_saved_per_fix:.0f}h of engineer time per fix; merge rate & native ACU pulled from Devin's Metrics/Consumption APIs.</div>
+   <div class="footnote">Measured (from Devin's Metrics API): PRs created/merged, autonomy rate, merge rate, funnel. Estimated (a labeled assumption, not measured): engineer-hours saved = PRs × ~{settings.hours_saved_per_fix:.0f}h/fix. ACU cost is available via Devin's Consumption API on Teams/Enterprise plans; on this Free account the API returns 0, so it's omitted rather than shown as $0.</div>
  </div>
 </body></html>"""

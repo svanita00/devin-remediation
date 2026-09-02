@@ -12,6 +12,7 @@ Run:  uvicorn app.main:app   (or docker compose up)
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -22,6 +23,7 @@ from fastapi.responses import RedirectResponse
 from app.config import settings
 from app import store
 from app.scans import trigger_scan
+from app.scheduler import weekly_loop, reconcile_loop
 from app.observability import router as obs_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -35,7 +37,10 @@ async def lifespan(app: FastAPI):
     log.info("Control plane starting: mode=%s target=%s", settings.devin_mode, settings.target_repo)
     if settings.devin_mode == "live" and not settings.devin_api_key:
         log.warning("DEVIN_MODE=live but DEVIN_API_KEY is empty — live calls will fail.")
+    tasks = [asyncio.create_task(weekly_loop()), asyncio.create_task(reconcile_loop())]
     yield
+    for t in tasks:
+        t.cancel()
 
 
 app = FastAPI(title="Devin Remediation Control Plane", lifespan=lifespan)

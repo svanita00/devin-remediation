@@ -3,14 +3,12 @@ services:
     build: .
     ports:
       - "8000:8000"
-    # .env is optional: a fresh clone runs in mock mode ($0) with the defaults below.
-    # Copy .env.example -> .env and set DEVIN_MODE=live + DEVIN_API_KEY to go live.
+    # .env is optional. A fresh clone with no .env runs in mock mode ($0) via the
+    # defaults in app/config.py. Copy .env.example -> .env and set DEVIN_MODE=live
+    # + DEVIN_API_KEY to drive real Devin.
     env_file:
       - path: .env
         required: false
-    environment:
-      DEVIN_MODE: ${DEVIN_MODE:-mock}
-      TARGET_REPO: ${TARGET_REPO:-svanita00/superset}
     volumes:
       - ./data:/app/data
     restart: unless-stopped

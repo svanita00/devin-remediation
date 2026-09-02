@@ -30,7 +30,14 @@ class Settings(BaseSettings):
     poll_interval_seconds: int = 10
     scan_poll_timeout_seconds: int = 3600
 
-    # Periodic trigger is the native schedule Automation (scripts/setup_devin.py) — not an in-app cron.
+    # --- Scheduled pipeline (the FULL scan -> auto-remediate-high pipeline on a cadence) ---
+    # A native Automation can only start a session; it can't run the multi-step
+    # scan->triage->remediate pipeline. So the control plane schedules /scan itself.
+    weekly_scan_enabled: bool = False
+    weekly_scan_interval_seconds: int = 7 * 24 * 3600   # weekly; lower it to demo
+
+    # --- Continuous reconcile: pull sessions from the Devin API + auto-review new PRs ---
+    reconcile_interval_seconds: int = 60                # 0 disables the background loop
 
     # --- Reporting assumptions (labeled estimates for the ROI view) ---
     hours_saved_per_fix: float = 2.0        # eng-hours a human would spend per fix (estimate)
