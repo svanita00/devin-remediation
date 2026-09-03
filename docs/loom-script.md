@@ -31,23 +31,22 @@ which flows into the dashboard.
 - "And it compounds — every Playbook and Knowledge note I add is context the whole team's handoffs inherit from then on. The system gets more capable over time without anyone re-teaching it."
 - *(Optional: hover the Knowledge note's trigger `When working in svanita00/superset` — visually proves it auto-applies, no prompting.)*
 
-## 3:15 — Proactive: the security scan
+## 3:15 — Proactive: the security scan (feat. #20, the authorization fix)
 - `[SHOW: Devin Code Scan findings]`
 - "The other side is proactive. I configured Devin's Code Scan with a threat model for this repo, so instead of waiting for someone to find issues, it surfaces them continuously."
-- "This scan produced 14 findings. And the key point: finding something doesn't mean blindly fixing everything — **I prioritize, and assign the ones worth Devin's time.**" `[SHOW: the ones you assigned — e.g. the latest_query_id authorization fix]`
-- "So the engineer stays in control of *what* gets done; Devin takes on the *doing*."
+- "This scan produced 14 findings. And the key point: finding something doesn't mean blindly fixing everything — **I prioritize, and assign the ones worth Devin's time.**"
+- "Here's one I assigned — a real **authorization bug**: a query tab wasn't enforcing ownership on the query it pointed to (`TabState.latest_query_id`), so a user could reference someone else's query." `[SHOW: PR #20]`
+- "And this is the part that genuinely impressed me — watch how it *verified* the fix." `[SHOW: the testing video]`
+- "It didn't just make the change and open a PR. It wrote and ran **access-control tests that prove the authorization actually holds** — the kind of adversarial verification you'd want a security-minded engineer to do before you trust the fix."
+- "So the engineer stays in control of *what* gets done; Devin takes on the *doing* — and here, the *proving*."
 
-## 4:00 — The work is actually good (top 3)
+## 4:00 — Two more, for range and judgment
 
-**Example 1 — #12, XSS (capability)** `[SHOW: PR #12 + regression test]`
-- "First, a security fix — an unsafe HTML rendering issue. This wasn't a mechanical bump: Devin had to understand *how* the value was being rendered, keep the HTML structure static while escaping the interpolated part, **and write a regression test with a real script payload to prove it's fixed.**"
-- "That's the baseline I was checking for — finding, understanding, fixing, *and proving it works.*"
+**Example 1 (optional, for breadth) — #14, deck.gl** `[SHOW: PR #14 + browser recording of charts]`
+- "To show this isn't just Python security work — here's a *breaking* frontend dependency upgrade, the hard case. Devin didn't take the naive upgrade path; it looked at the dependency tree and found the safer route."
+- "And it **opened the app in a browser and confirmed the charts still rendered** before opening the PR — verifying its own work the way an engineer would."
 
-**Example 2 — #14, deck.gl (breadth + self-verification)** `[SHOW: PR #14 + browser recording of charts]`
-- "Second, a *breaking* dependency upgrade — the hard case. Devin didn't take the naive upgrade path; it looked at the dependency tree and found the safer route."
-- "And the part I loved — **it actually opened the app in a browser and confirmed the charts still rendered** before opening the PR. It verified its own work the way an engineer would."
-
-**Example 3 — #10, Slack error handling (human judgment)** `[SHOW: PR #10 → review finding → your comment → follow-up]`
+**Example 2 — #10, Slack error handling (human judgment — the closer)** `[SHOW: PR #10 → review finding → your comment → follow-up]`
 - "Third, and my favorite. Devin narrowed an overly broad error handler. Then its own review flagged an edge case — one cache backend could throw an error outside the new list."
 - "Instead of telling it to bolt on a hack, I asked it to find a clean, backend-agnostic fix. **There wasn't one** — so it documented the tradeoff and added test coverage instead of forcing bad coupling."
 - "That's the boundary that matters to me: **autonomy doesn't mean auto-merging everything.** Devin does the investigation, implementation, and iteration — the engineer still makes the architectural call. And on these nuanced ones, review caught real gaps."
@@ -68,6 +67,7 @@ which flows into the dashboard.
 ---
 
 ## Notes / timing
-- ~8–9 min at a natural pace. If long, trim the deck.gl browser clip (#14) to one sentence; the top-3 section compresses most easily — but keep #10's closing line, it's the strongest.
-- If **#20** (latest_query_id authorization, from the scan) merges before recording, promote it to the headline *proactive* example — real access-control testing is a stronger "Devin finds work → engineer decides" story than #15.
+- ~8–9 min at a natural pace. Tightest version is three shown PRs: **#18 (live/reactive) → #20 (proactive security, testing video) → #10 (judgment closer)**. #14 is the optional breadth example — cut it first if you're long.
+- **#20 honesty:** if it hasn't merged by recording, that's fine — show it as in-progress and let the *testing rigor* be the point; the pending human review reinforces the human-in-the-loop gate. If it has merged, even better.
+- Two verification beats are intentional but distinct: #20 = automated access-control tests; #14 = manual browser render check. Lead #14 with *breadth* (frontend, not security) so it doesn't feel like a repeat.
 - Concrete "learns over time" seed you can gesture to: the timezone self-correction (#13) is exactly the kind of review insight that *should* become a Knowledge note so it never recurs.
