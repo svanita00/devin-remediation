@@ -61,9 +61,9 @@ in Settings → Review as a complement.)
 
 ## Results
 
-- **10 PRs merged after review**, across three sources: the 7 curated findings, Devin's
-  own Code Scan discoveries, and on-call issues handed off via `devin-fix`. One more — an
-  authorization fix surfaced by the scan (#20) — is in progress.
+- **14 PRs merged after review** (plus the authorization fix #20 still in review), across
+  three sources: the 7 curated findings, Devin's own Code Scan discoveries, and a series of
+  on-call issues handed off via `devin-fix`. `/dashboard` shows the live totals.
 - **The 7 curated findings all landed** (PRs #8–#14): dependency CVEs, an XSS class, a
   timezone-correctness fix, a blind-except narrowing, and a breaking deck.gl upgrade.
 - **Devin Review caught a correctness bug** in the timezone remediation (#13) and drove a
@@ -76,8 +76,11 @@ in Settings → Review as a complement.)
   progress, doing real access-control testing).
 - **Devin fixed dependencies the correct way** (edited the `uv` source constraint and
   recompiled) and verified the deck.gl upgrade (#14) by **running the app in a browser**.
-- **A scheduled trigger is configured** via Devin's native weekly Auto Scan; the fixes above
-  came from the `devin-fix` label and on-demand scans, not the schedule.
+- **Scheduled scanning needs no hardcoded scan** — the control plane runs the full
+  scan→remediate pipeline on a cadence (`WEEKLY_SCAN_ENABLED`), starting a *fresh* Code Scan
+  via the API each run. (Devin's native weekly Auto Scan is an optional no-code alternative,
+  but it must be created in the Devin UI first.) The fixes above came from the `devin-fix`
+  label and on-demand scans, not a schedule.
 
 ## Quickstart — mock mode ($0, no key, how a grader runs it)
 
@@ -111,6 +114,10 @@ PRs → review → ACU cost) so the entire system runs and demos offline.
    - **event:** add the `devin-fix` label to an issue
    - **on-demand:** `curl -X POST localhost:8000/scan`
    - **periodic:** set `WEEKLY_SCAN_ENABLED=true` so the control plane runs `/scan` on a cadence
+
+Everything is scoped to **your** `TARGET_REPO` and `DEVIN_ORG_ID`: the event Automation only
+fires on issues in your repo, scans run against it, and each scheduled scan is created fresh
+via the API — nothing is tied to the author's repo or a shared scan id.
 
 ## The seeded issues (scanner-found on real Superset mainline)
 

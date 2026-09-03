@@ -30,8 +30,8 @@ async def reconcile_loop() -> None:
         await asyncio.sleep(settings.reconcile_interval_seconds)
         try:
             await sync_live_sessions()
-        except Exception:
-            pass
+        except Exception as e:
+            store.log(f"⚠️ reconcile loop error: {type(e).__name__}: {e}")
 
 
 async def weekly_loop() -> None:
