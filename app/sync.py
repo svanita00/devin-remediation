@@ -73,7 +73,8 @@ async def sync_live_sessions() -> int:
     try:
         try:
             sessions = await client.list_sessions(limit=50)
-        except Exception:
+        except Exception as e:
+            store.log(f"⚠️ could not list Devin sessions: {type(e).__name__}: {e}")
             return 0
         run_id = store.get_or_create_live_run(settings.target_repo)
         n = 0
@@ -101,8 +102,8 @@ async def sync_live_sessions() -> int:
                     try:
                         await client.trigger_review(s.pull_requests[0])
                         store.log(f"🔍 Devin Review auto-triggered on {s.pull_requests[0]}")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        store.log(f"⚠️ auto-review failed for {s.pull_requests[0]}: {type(e).__name__}: {e}")
                     store.upsert_remediation_by_session(run_id, s.session_id, reviewed=1)
         if n:
             store.update_scan_run(run_id, findings_total=len(store.list_remediations()))

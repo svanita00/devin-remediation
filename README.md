@@ -1,10 +1,13 @@
 # Devin Remediation Control Plane
 
-An **event-driven remediation control plane** built on the Devin API that turns
-security and code-quality findings into **review-ready pull requests**.
+A **team-level remediation queue** built on the Devin API. Every team has work that's
+important but expensive to context-switch into — security findings, dependency upgrades,
+on-call cleanup, tech debt. This turns Devin into a **first-pass engineer** for that
+queue: an engineer decides what to delegate and reviews the result; Devin does the
+investigation, the fix, the tests, and the PR.
 
-The system automates the expensive engineering loop — investigation, implementation,
-testing, and review — while preserving a **human approval gate** for higher-risk changes.
+The point: it turns Devin from an individual tool an engineer opens into a **team-level
+workflow** — a shared handoff, a human approval gate, and visibility across every run.
 
 Target for this demo: a fork of [Apache Superset](https://github.com/apache/superset).
 
@@ -15,25 +18,33 @@ Everything here runs from **one command** (`docker compose up`) and reproduces i
 
 ## Overview
 
-Scanners identify *what* to fix; the bottleneck is the engineering time to fix each
-finding, test it, and open a reviewable PR. Devin ships the remediation primitives
-natively (Code Scans, Automations, Playbooks, Metrics). This project is the thin layer
-that composes them into a governed program: each fix is implemented by a Devin session,
-independently reviewed (Devin Review + a human) before merge, and tracked on a control
-plane. Where review surfaces a correctness issue, the change is sent back to Devin to
-iterate rather than merged as-is (e.g. PRs #10 and #13). The emphasis is on preserving
-existing behavior; the goal is not to maximize autonomous merges, but to maximize the
-engineering work that can be safely automated behind a human approval gate.
+The hard part of remediation usually isn't knowing *what* to fix — it's the engineering
+time each item costs: context-switch in, understand the code, make the change, test it,
+open a reviewable PR. This system lets an engineer delegate that first pass to Devin.
+
+Work enters the queue two ways:
+- **Reactive** — an engineer labels a GitHub issue `devin-fix` (e.g. something picked up on call).
+- **Proactive** — Devin's Code Scan surfaces security findings; the engineer prioritizes which to hand off.
+
+Both converge on one flow: **finding → Devin investigates → fix + tests → PR → human
+review.** Devin ships the primitives natively (Code Scans, Automations, Playbooks,
+Metrics); this project is the thin layer that composes them into a governed team
+workflow — each fix implemented by a Devin session, independently reviewed (Devin Review
++ a human) before merge, and tracked on a control plane. Where review surfaces a
+correctness issue, the change goes back to Devin to iterate rather than merging as-is
+(e.g. PRs #10 and #13). The goal isn't to maximize autonomous merges — it's to maximize
+the engineering work that can be safely automated behind a human approval gate.
 
 ## Architecture
 
 ![Remediation flow](docs/architecture.png)
 
 **A fix starts one of two ways:**
-1. **An engineer labels an issue** `devin-fix` → Devin fixes that specific issue.
-2. **A security scan finds issues** → Devin fixes the high-severity ones. The scan runs
-   **on-demand** (`POST /scan`) or **weekly** (scheduled); lower-confidence findings are
-   surfaced for human triage rather than auto-fixed.
+1. **Reactive — an engineer labels an issue** `devin-fix` → Devin picks up that specific
+   issue. The GitHub issue is the interface; the label is the handoff.
+2. **Proactive — Devin's Code Scan surfaces findings** → the engineer prioritizes and hands
+   the ones worth it to Devin. The scan runs **on-demand** (`POST /scan`) or on a schedule;
+   lower-confidence findings are surfaced for human triage rather than auto-fixed.
 
 From there it's one flow: a **Devin session** investigates, fixes, tests, and opens a
 **PR** → **Devin Review** analyzes it → a **human approves and merges**, or holds it. If

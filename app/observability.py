@@ -119,8 +119,10 @@ async def _sync():
     try:
         from app.sync import sync_live_sessions
         await sync_live_sessions()
-    except Exception:
-        pass
+    except Exception as e:
+        # A control plane shouldn't silently eat reconcile failures — surface it
+        # on the activity feed so a stale dashboard is explainable, not mysterious.
+        store.log(f"⚠️ live sync failed: {type(e).__name__}: {e}")
 
 
 @router.get("/metrics")
