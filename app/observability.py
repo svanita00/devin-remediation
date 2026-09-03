@@ -236,7 +236,7 @@ async def dashboard() -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     return f"""<!doctype html><html><head><meta charset="utf-8">
-<title>Devin Remediation — Control Plane</title><meta http-equiv="refresh" content="5">
+<title>Devin Remediation — Control Plane</title><meta http-equiv="refresh" content="180">
 <style>
  :root{{--bg:#f4f5f8;--card:#fff;--ink:#0f172a;--sub:#64748b;--line:#eef1f5;}}
  *{{box-sizing:border-box}}
@@ -275,7 +275,7 @@ async def dashboard() -> str:
  .footnote{{color:#94a3b8;font-size:11px;margin-top:14px}}
 </style></head><body>
  <div class="top"><h1>Devin Remediation — Control Plane</h1>
-   <div class="meta">native session origins: {origin_txt} · reads Devin Metrics + Consumption APIs · {now} · auto-refresh 5s</div></div>
+   <div class="meta">native session origins: {origin_txt} · reads Devin Metrics + Consumption APIs · {now} · auto-refresh 3m</div></div>
  <div class="wrap">
    {hero}
    <div class="grid">{kpis}</div>
