@@ -61,12 +61,23 @@ in Settings → Review as a complement.)
 
 ## Results
 
-- **7 curated findings → 7 remediation PRs**, 7/7 merged after review.
-- **Devin Review caught a correctness bug** in the timezone remediation and drove a second iteration (Devin self-corrected).
-- The **Slack remediation surfaced a backend-compatibility tradeoff** that required human judgment (left open with the tradeoff documented + tests added).
-- **Devin Code Scan independently discovered** additional findings and opened a fix (semantic-layer secret masking).
-- The **scheduled automation was exercised end-to-end** (trigger fired).
-- Devin fixed dependencies the *correct* way (edited the `uv` source constraint and recompiled) and verified the deck.gl upgrade by **running the app in a browser**.
+- **10 PRs merged after review**, across three sources: the 7 curated findings, Devin's
+  own Code Scan discoveries, and on-call issues handed off via `devin-fix`. One more — an
+  authorization fix surfaced by the scan (#20) — is in progress.
+- **The 7 curated findings all landed** (PRs #8–#14): dependency CVEs, an XSS class, a
+  timezone-correctness fix, a blind-except narrowing, and a breaking deck.gl upgrade.
+- **Devin Review caught a correctness bug** in the timezone remediation (#13) and drove a
+  second iteration — Devin self-corrected before merge.
+- **The Slack fix (#10) required human judgment**: narrowing the blind `except` surfaced a
+  backend-compatibility tradeoff with no clean fix, so the tradeoff was documented and
+  regression tests added — then reviewed and merged as a deliberate call, not an auto-merge.
+- **Devin's Code Scan independently discovered findings** and opened fixes — semantic-layer
+  secret masking (#15) and authorization fixes handed off from the scan (#19 merged; #20 in
+  progress, doing real access-control testing).
+- **Devin fixed dependencies the correct way** (edited the `uv` source constraint and
+  recompiled) and verified the deck.gl upgrade (#14) by **running the app in a browser**.
+- **A scheduled trigger is configured** via Devin's native weekly Auto Scan; the fixes above
+  came from the `devin-fix` label and on-demand scans, not the schedule.
 
 ## Quickstart — mock mode ($0, no key, how a grader runs it)
 
