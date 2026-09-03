@@ -43,8 +43,9 @@ A **FastAPI control plane** (this repo) runs it all: it triggers the scan pipeli
 via a **continuous background loop**, **reconciles every session (any origin) from the
 Devin API** and **auto-triggers Devin Review on each new PR** — so review is part of the
 automation (not a manual `/devin review`), and the **dashboard** reflects reality, not
-just what this process launched. (Devin's native Automations provision the event/schedule
-triggers via `scripts/setup_devin.py`; Devin's native auto-review can also be toggled on
+just what this process launched. (The event trigger is a native Devin Automation
+provisioned via `scripts/setup_devin.py`; the periodic trigger is the control plane's own
+scheduler running `/scan` on a cadence. Devin's native auto-review can also be toggled on
 in Settings → Review as a complement.)
 
 ## Results
@@ -75,7 +76,7 @@ PRs → review → ACU cost) so the entire system runs and demos offline.
 2. Install the **Devin.ai GitHub App** on your fork with write on Code/PRs/Issues/Checks
    (set it to **all repositories** so public-repo automation events are delivered).
 3. In `.env`: `DEVIN_MODE=live`, `DEVIN_API_KEY=cog_…`, `DEVIN_ORG_ID=org-…`, `TARGET_REPO=you/superset`.
-4. **Provision the Devin resources** (Playbook, Knowledge, both Automations), idempotent:
+4. **Provision the Devin resources** (Playbook, Knowledge, the event Automation), idempotent:
    ```bash
    DEVIN_API_KEY=$DEVIN_API_KEY DEVIN_ORG_ID=$DEVIN_ORG_ID TARGET_REPO=you/superset \
      python scripts/setup_devin.py
@@ -87,7 +88,7 @@ PRs → review → ACU cost) so the entire system runs and demos offline.
 6. `docker compose up`, then trigger any of:
    - **event:** add the `devin-fix` label to an issue
    - **on-demand:** `curl -X POST localhost:8000/scan`
-   - **periodic:** the weekly schedule fires on its own
+   - **periodic:** set `WEEKLY_SCAN_ENABLED=true` so the control plane runs `/scan` on a cadence
 
 ## The seeded issues (scanner-found on real Superset mainline)
 
@@ -128,7 +129,7 @@ app/
   observability.py  /metrics + /dashboard (local + native metrics)
   devin/          Devin v3 client: interface + live + mock
 scripts/
-  setup_devin.py  idempotently provision Playbook + Knowledge + both Automations
+  setup_devin.py  idempotently provision Playbook + Knowledge + the event Automation
   simulate.py     one-command trigger for graders/demo
 seed_issues/
   *.md            the 7 curated issue bodies (the use case)
@@ -138,7 +139,7 @@ tests/            unit tests for the core logic (pip install pytest && pytest)
 
 ## Devin platform surface used
 
-Sessions · **Code Scans** · **Automations** (event + schedule) · **Playbooks** ·
+Sessions · **Code Scans** · **Automations** (event trigger) · **Playbooks** ·
 **Knowledge** · **Devin Review** · **Metrics** · **Consumption**. (Dynamic Workflows &
 MCP integrations noted as next steps.)
 

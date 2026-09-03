@@ -4,8 +4,11 @@
 Creates (if absent):
   1. a remediation Playbook (reusable SOP),
   2. a repo-context Knowledge note,
-  3. an EVENT Automation  (GitHub `devin-fix` label -> remediation session -> PR),
-  4. a SCHEDULE Automation (weekly security sweep).
+  3. an EVENT Automation  (GitHub `devin-fix` label -> remediation session -> PR).
+
+The periodic trigger is the control plane's own scheduler (WEEKLY_SCAN_ENABLED),
+which runs the /scan pipeline (native Code Scan -> auto-remediate high/critical) on a
+cadence — a native Automation can only start a session, not run that multi-step flow.
 
 This makes the whole setup reproducible: a new user runs
     DEVIN_API_KEY=... DEVIN_ORG_ID=org-... TARGET_REPO=you/superset python scripts/setup_devin.py
@@ -110,32 +113,6 @@ def provision_event_automation(playbook_id: str | None) -> None:
           else f"• Event automation failed: {code} {d}")
 
 
-def provision_schedule_automation(playbook_id: str | None) -> None:
-    name = f"Weekly security sweep ({REPO})"
-    if name in _existing_names("automations", "name"):
-        print("• Schedule automation exists — skipping")
-        return
-    pb = f" Follow @playbook:{playbook_id}." if playbook_id else ""
-    body = {
-        "name": name,
-        "triggers": [{"event_type": "schedule:recurring",
-                      "conditions": {"any": [{"all": [
-                          {"field": "rrule", "operator": "matches",
-                           "value": "FREQ=WEEKLY;BYDAY=MO;BYHOUR=9;BYMINUTE=0"}]}]}}],
-        "actions": [{"type": "start_session",
-                     "prompt": (f"Weekly security sweep of @{REPO}. Check for known dependency "
-                                "vulnerabilities (pip-audit on requirements, npm audit in "
-                                "superset-frontend) and open a PR for each HIGH/CRITICAL finding."
-                                f"{pb} Keep each PR minimal and scoped."),
-                     "session": {"tags": ["scheduled-sweep", "security"]}}],
-        "run_as": {"type": "creator"}, "enabled": True,
-        "limits": {"max_acu_limit": 30}, "notifications": {"email": {"when": "dispatch_failed"}},
-    }
-    code, d = _call("POST", "automations", body)
-    print(f"• Schedule automation created: {d.get('automation_id')}" if code < 300
-          else f"• Schedule automation failed: {code} {d}")
-
-
 def main() -> int:
     if not KEY or not ORG:
         print("ERROR: set DEVIN_API_KEY and DEVIN_ORG_ID", file=sys.stderr)
@@ -144,8 +121,7 @@ def main() -> int:
     pid = provision_playbook()
     provision_knowledge()
     provision_event_automation(pid)
-    provision_schedule_automation(pid)
-    print("\nDone. Label an issue `devin-fix` (event) or POST /scan (code-scan) to remediate.")
+    print("\nDone. Label an issue `devin-fix` (event) or POST /scan (on-demand/scheduled) to remediate.")
     return 0
 
 

@@ -164,9 +164,8 @@ async def dashboard() -> str:
     hero = f"""
     <div class="hero">
       <div class="hero-eyebrow">AUTONOMOUS REMEDIATION · {html.escape(settings.target_repo)}</div>
-      <div class="hero-big">{m['prs_created']} findings fixed as PRs · {m['prs_merged']} merged</div>
-      <div class="hero-sub">≈ {m['hours_saved']:.0f} est. engineer-hours saved
-        · {autonomy_pct} autonomous · <span class="chip">{m['mode']}</span></div>
+      <div class="hero-big">{m['prs_created']} PRs opened · {m['prs_merged']} merged</div>
+      <div class="hero-sub">{m['dispatched']} findings remediated · {autonomy_pct} autonomous · <span class="chip">{m['mode']}</span></div>
     </div>"""
 
     # ---- KPI cards (measured only) ----
@@ -179,8 +178,9 @@ async def dashboard() -> str:
               f'<div class="k-s">{m["prs_merged"]} of {m["prs_created"]} PRs merged</div>'),
         _card(f'<div class="k-l">PRs opened</div><div class="k-v">{m["prs_created"]}</div>'
               f'<div class="k-s">across {m["scan_runs"]} runs / triggers</div>'),
-        _card(f'<div class="k-l">Est. engineer-hours saved</div><div class="k-v">{m["hours_saved"]:.0f}<span class="unit"> h</span></div>'
-              f'<div class="k-s">assumption: ~{settings.hours_saved_per_fix:.0f}h per fix (not measured)</div>'),
+        _card(f'<div class="k-l">Estimated engineer-hours reclaimed</div>'
+              f'<div class="k-v" style="color:#94a3b8">~{m["hours_saved"]:.0f}<span class="unit"> h</span></div>'
+              f'<div class="k-s">{m["prs_created"]} PRs × ~{settings.hours_saved_per_fix:.0f}h/fix · <em>illustrative assumption, not measured</em></div>'),
     ])
 
     # ---- funnel ----
