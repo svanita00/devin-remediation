@@ -61,9 +61,10 @@ in Settings → Review as a complement.)
 
 ## Results
 
-- **14 PRs merged after review** (plus the authorization fix #20 still in review), across
-  three sources: the 7 curated findings, Devin's own Code Scan discoveries, and a series of
-  on-call issues handed off via `devin-fix`. `/dashboard` shows the live totals.
+- **18 PRs merged after review** (plus 3 held open at the review gate, including the #20
+  authorization fix), across three sources: the 7 curated findings, Devin's own Code Scan
+  discoveries, and a series of on-call issues handed off via `devin-fix`. `/dashboard` shows
+  the live totals.
 - **The 7 curated findings all landed** (PRs #8–#14): dependency CVEs, an XSS class, a
   timezone-correctness fix, a blind-except narrowing, and a breaking deck.gl upgrade.
 - **Devin Review caught a correctness bug** in the timezone remediation (#13) and drove a
